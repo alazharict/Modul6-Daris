@@ -25,6 +25,15 @@ export const Api = {
   getSensorReadings() {
     return request("/api/readings");
   },
+  createReading(payload) {
+    return request("/api/readings", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  getDifferences() {
+    return request("/api/differences");
+  },
   getThresholds() {
     return request("/api/thresholds");
   },

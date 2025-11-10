@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import  mqtt  from "mqtt";
 import { Buffer } from "buffer";
 import { MQTT_BROKER_URL, MQTT_TOPIC } from "../services/config.js";
+import { Api } from "../services/api.js";
 
 if (typeof global.Buffer === "undefined") {
   global.Buffer = Buffer;
@@ -77,6 +78,20 @@ export function useMqttSensor() {
           timestamp: payload.timestamp ?? new Date().toISOString(),
           error: null,
         }));
+        // persist reading to backend so DB and frontend stay in sync
+        (async () => {
+          try {
+            if (typeof payload.temperature === "number") {
+              await Api.createReading({
+                temperature: payload.temperature,
+                threshold_value: typeof payload.threshold_value === "number" ? payload.threshold_value : null,
+              });
+            }
+          } catch (err) {
+            // don't surface to UI; log for debugging
+            console.error("Failed to persist reading to backend:", err.message || err);
+          }
+        })();
       } catch (error) {
         setState((prev) => ({ ...prev, error: error.message }));
       }
