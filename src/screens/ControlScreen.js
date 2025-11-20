@@ -47,10 +47,14 @@ export function ControlScreen() {
     Alert.alert('Session Expired', 'Please login again', [
       { 
         text: 'OK', 
-        onPress: () => navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        })
+        onPress: async () => {
+          try {
+            await logout();
+            // App listens to auth changes and will show the Login screen
+          } catch (err) {
+            console.error('Error during session expiry logout:', err);
+          }
+        }
       }
     ]);
   };
@@ -99,10 +103,7 @@ export function ControlScreen() {
           onPress: async () => {
             try {
               await logout();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
+              // App listens to auth changes and will show the Login screen
             } catch (error) {
               console.error('Logout error:', error);
             }

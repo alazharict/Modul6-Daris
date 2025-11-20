@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { storeData } from '../utils/storage';
+import { emitAuthChange } from '../utils/authEvents';
 import { Api } from '../services/api';
 
 const LoginScreen = () => {
@@ -49,11 +50,12 @@ const LoginScreen = () => {
       await storeData('token', data.token);
       await storeData('user', JSON.stringify(data.user));
 
-      // Navigate to main app dengan Tab Navigator
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      // Emit auth change so app root navigator switches to MainTabs
+      try {
+        emitAuthChange(true);
+      } catch (err) {
+        console.error('Error emitting auth change:', err);
+      }
 
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');

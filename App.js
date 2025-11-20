@@ -12,6 +12,7 @@ import LoginScreen from "./src/screens/LoginScreen.js";
 import SignUpScreen from "./src/screens/SignUpScreen.js";
 import { assertConfig } from "./src/services/config.js";
 import { isAuthenticated } from "./src/utils/storage.js";
+import { subscribeAuth } from "./src/utils/authEvents.js";
 import { ActivityIndicator, View } from "react-native";
 
 const Tab = createBottomTabNavigator();
@@ -54,6 +55,8 @@ export default function App() {
   useEffect(() => {
     checkAuthStatus();
     assertConfig();
+    const unsub = subscribeAuth((loggedIn) => setIsLoggedIn(!!loggedIn));
+    return unsub;
   }, []);
 
   const checkAuthStatus = async () => {

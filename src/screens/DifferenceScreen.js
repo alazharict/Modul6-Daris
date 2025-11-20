@@ -6,11 +6,13 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMqttSensor } from "../hooks/useMqttSensor.js";
 import { Api } from "../services/api.js";
 import { DataTable } from "../components/DataTable.js";
+import { logout } from "../utils/storage";
 
 export function DifferenceScreen() {
   const {
@@ -35,17 +37,20 @@ export function DifferenceScreen() {
       const latest = data?.[0] ?? null;
       setThreshold(typeof latest?.value === "number" ? latest.value : null);
     } catch (err) {
-      if (err.message.includes('Authentication failed')) {
-    Alert.alert('Session Expired', 'Please login again', [
-      { 
-        text: 'OK', 
-        onPress: () => navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        })
-      }
-    ]);
-  } else {
+      if (err.message && err.message.includes("Authentication failed")) {
+        Alert.alert("Session Expired", "Please login again", [
+          {
+            text: "OK",
+            onPress: async () => {
+              try {
+                await logout();
+              } catch (e) {
+                console.error("Error during session expiry logout:", e);
+              }
+            },
+          },
+        ]);
+      } else {
         setError(err.message);
       }
     } finally {

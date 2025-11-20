@@ -60,8 +60,12 @@ export const Api = {
   },
 
   // Sensor data endpoints
-  getSensorReadings() {
-    return request("/api/readings");
+  getSensorReadings(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return request(`/api/readings?${queryString}`);
+  },
+   getSensorReadingsWithPagination(page = 1, limit = 10) {
+    return request(`/api/readings?page=${page}&limit=${limit}`);
   },
 
   createReading(payload) {

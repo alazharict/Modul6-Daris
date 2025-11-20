@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { storeData } from '../utils/storage';
+import { emitAuthChange } from '../utils/authEvents';
 import { Api } from '../services/api';
 
 const SignUpScreen = () => {
@@ -74,12 +75,12 @@ const SignUpScreen = () => {
       await storeData('token', data.token);
       await storeData('user', JSON.stringify(data.user));
 
-      // Navigate to main app
-      // Navigate to main app (reset to an existing tab route)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Monitoring' }],
-      });
+      // Emit auth change so app root navigator switches to MainTabs
+      try {
+        emitAuthChange(true);
+      } catch (err) {
+        console.error('Error emitting auth change:', err);
+      }
 
     } catch (error) {
       Alert.alert('Registration Failed', error.message || 'Something went wrong');

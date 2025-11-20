@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { emitAuthChange } from './authEvents';
 
 export const storeData = async (key, value) => {
   try {
@@ -60,6 +61,8 @@ export const logout = async () => {
     await removeData('token');
     await removeData('user');
     console.log('Logged out successfully');
+    // notify app about auth change so navigation can update
+    try { emitAuthChange(false); } catch (e) { /* ignore */ }
   } catch (error) {
     console.error('Error during logout:', error);
     throw error;
