@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { storeData } from '../utils/storage';
 import { emitAuthChange } from '../utils/authEvents';
 import { Api } from '../services/api';
+import { SwipeIndicator } from "../components/SwipeIndicator";
 
 const LoginScreen = () => {
   const navigation = useNavigation();

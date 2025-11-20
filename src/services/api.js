@@ -59,6 +59,12 @@ export const Api = {
     return request("/api/auth/profile");
   },
 
+  updateProfile(userData) {
+    return request("/api/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    });
+  },
   // Sensor data endpoints
   getSensorReadings(params = {}) {
     const queryString = new URLSearchParams(params).toString();

@@ -47,10 +47,24 @@ export const getToken = async () => {
 };
 
 export const getUser = async () => {
-  const userString = await getData('user');
-  return userString ? JSON.parse(userString) : null;
+  try {
+    const userString = await getData('user');
+    return userString ? JSON.parse(userString) : null;
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return null;
+  }
 };
 
+export const updateUser = async (userData) => {
+  try {
+    await storeData('user', JSON.stringify(userData));
+    return true;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return false;
+  }
+};
 export const isAuthenticated = async () => {
   const token = await getToken();
   return !!token;
