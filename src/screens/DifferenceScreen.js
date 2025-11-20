@@ -13,7 +13,12 @@ import { Api } from "../services/api.js";
 import { DataTable } from "../components/DataTable.js";
 
 export function DifferenceScreen() {
-  const { temperature, timestamp, connectionState, error: mqttError } = useMqttSensor();
+  const {
+    temperature,
+    timestamp,
+    connectionState,
+    error: mqttError,
+  } = useMqttSensor();
   const [threshold, setThreshold] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,7 +35,19 @@ export function DifferenceScreen() {
       const latest = data?.[0] ?? null;
       setThreshold(typeof latest?.value === "number" ? latest.value : null);
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Authentication failed')) {
+    Alert.alert('Session Expired', 'Please login again', [
+      { 
+        text: 'OK', 
+        onPress: () => navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
+    ]);
+  } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -48,7 +65,9 @@ export function DifferenceScreen() {
       setReadings([]);
       const data = await Api.getDifferences();
       // only keep rows that have a numeric `difference` value (i.e. rows from reading_differences)
-      const filtered = (data ?? []).filter((r) => typeof r.difference === "number");
+      const filtered = (data ?? []).filter(
+        (r) => typeof r.difference === "number"
+      );
       setReadings(filtered);
     } catch (err) {
       setApiError(err.message);
@@ -70,68 +89,101 @@ export function DifferenceScreen() {
     }
   }, [fetchLatestThreshold, fetchReadings]);
 
-  const diff = typeof temperature === "number" && typeof threshold === "number" ? temperature - threshold : null;
-  const diffText = diff === null ? "--" : `${diff > 0 ? "+" : ""}${diff.toFixed(2)}°C`;
+  const diff =
+    typeof temperature === "number" && typeof threshold === "number"
+      ? temperature - threshold
+      : null;
+  const diffText =
+    diff === null ? "--" : `${diff > 0 ? "+" : ""}${diff.toFixed(2)}°C`;
   const statusColor = diff === null ? "#333" : diff > 0 ? "#c82333" : "#15803d";
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.card}>
           <Text style={styles.title}>Temperature vs Threshold</Text>
 
           <Text style={styles.label}>Realtime temperature</Text>
           <Text style={styles.value}>
-            {typeof temperature === "number" ? `${temperature.toFixed(2)}°C` : "--"}
+            {typeof temperature === "number"
+              ? `${temperature.toFixed(2)}°C`
+              : "--"}
           </Text>
 
           <Text style={styles.label}>Latest threshold</Text>
           {loading ? (
             <ActivityIndicator />
           ) : (
-            <Text style={styles.value}>{typeof threshold === "number" ? `${threshold.toFixed(2)}°C` : "--"}</Text>
+            <Text style={styles.value}>
+              {typeof threshold === "number"
+                ? `${threshold.toFixed(2)}°C`
+                : "--"}
+            </Text>
           )}
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <Text style={styles.label}>Difference (realtime - threshold)</Text>
-          <Text style={[styles.diffText, { color: statusColor }]}>{diffText}</Text>
+          <Text style={[styles.diffText, { color: statusColor }]}>
+            {diffText}
+          </Text>
 
           <Text style={styles.metaText}>MQTT status: {connectionState}</Text>
-          {timestamp && <Text style={styles.metaText}>Last update: {new Date(timestamp).toLocaleString()}</Text>}
-          {mqttError && <Text style={styles.errorText}>MQTT error: {mqttError}</Text>}
+          {timestamp && (
+            <Text style={styles.metaText}>
+              Last update: {new Date(timestamp).toLocaleString()}
+            </Text>
+          )}
+          {mqttError && (
+            <Text style={styles.errorText}>MQTT error: {mqttError}</Text>
+          )}
         </View>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Difference History</Text>
           {loadingReadings && <ActivityIndicator />}
         </View>
-        {apiError && <Text style={styles.errorText}>Failed to load history: {apiError}</Text>}
+        {apiError && (
+          <Text style={styles.errorText}>
+            Failed to load history: {apiError}
+          </Text>
+        )}
         <DataTable
           columns={[
             {
               key: "recorded_at",
               title: "Timestamp",
-              render: (value) => (value ? new Date(value).toLocaleString() : "--"),
+              render: (value) =>
+                value ? new Date(value).toLocaleString() : "--",
             },
             {
               key: "temperature",
               title: "Temperature (°C)",
-              render: (value) => (typeof value === "number" ? `${Number(value).toFixed(2)}` : "--"),
+              render: (value) =>
+                typeof value === "number"
+                  ? `${Number(value).toFixed(2)}`
+                  : "--",
             },
             {
               key: "threshold_value",
               title: "Threshold (°C)",
-              render: (value) => (typeof value === "number" ? `${Number(value).toFixed(2)}` : "--"),
+              render: (value) =>
+                typeof value === "number"
+                  ? `${Number(value).toFixed(2)}`
+                  : "--",
             },
             {
               key: "difference",
               title: "Difference (°C)",
-                render: (value, item) => {
-                  // backend stores difference directly
-                  return typeof value === "number" ? `${value > 0 ? "+" : ""}${Number(value).toFixed(2)}` : "--";
-                },
+              render: (value, item) => {
+                // backend stores difference directly
+                return typeof value === "number"
+                  ? `${value > 0 ? "+" : ""}${Number(value).toFixed(2)}`
+                  : "--";
+              },
             },
           ]}
           data={readings}

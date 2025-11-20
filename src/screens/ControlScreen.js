@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { Api } from "../services/api.js";
-import { DataTable } from "../components/DataTable.js";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { Api } from "../services/api";
+import { DataTable } from "../components/DataTable";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { logout } from "../utils/storage";
 
 export function ControlScreen() {
+  const navigation = useNavigation();
   const [thresholdValue, setThresholdValue] = useState(30);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,11 +33,27 @@ export function ControlScreen() {
       const data = await Api.getThresholds();
       setHistory(data ?? []);
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Authentication failed')) {
+        handleAuthError();
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleAuthError = () => {
+    Alert.alert('Session Expired', 'Please login again', [
+      { 
+        text: 'OK', 
+        onPress: () => navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
+    ]);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -58,80 +77,117 @@ export function ControlScreen() {
       setNote("");
       await fetchHistory();
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Authentication failed')) {
+        handleAuthError();
+      } else {
+        setError(err.message);
+      }
     } finally {
       setSubmitting(false);
     }
   }, [thresholdValue, note, fetchHistory]);
 
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await logout();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              console.error('Logout error:', error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Configure Threshold</Text>
-          {latestThreshold !== null && (
-            <Text style={styles.metaText}>
-              Current threshold: {Number(latestThreshold).toFixed(2)}°C
-            </Text>
-          )}
-          <Text style={styles.label}>Threshold (°C)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={String(thresholdValue)}
-            onChangeText={setThresholdValue}
-          />
-          <Text style={styles.label}>Note (optional)</Text>
-          <TextInput
-            style={[styles.input, styles.noteInput]}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            placeholder="Describe why you are changing the threshold"
-          />
-          {error && <Text style={styles.errorText}>{error}</Text>}
-          <TouchableOpacity
-            style={[styles.button, submitting && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Threshold</Text>}
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.card}>
+            <View style={styles.headerRow}>
+              <Text style={styles.title}>Configure Threshold</Text>
+              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {latestThreshold !== null && (
+              <Text style={styles.metaText}>
+                Current threshold: {Number(latestThreshold).toFixed(2)}°C
+              </Text>
+            )}
+            <Text style={styles.label}>Threshold (°C)</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={String(thresholdValue)}
+              onChangeText={setThresholdValue}
+              editable={!submitting}
+            />
+            <Text style={styles.label}>Note (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.noteInput]}
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+              placeholder="Describe why you are changing the threshold"
+              editable={!submitting}
+            />
+            {error && <Text style={styles.errorText}>{error}</Text>}
+            <TouchableOpacity
+              style={[styles.button, submitting && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Threshold</Text>}
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Threshold History</Text>
-          {loading && <ActivityIndicator />}
-        </View>
-        <DataTable
-          columns={[
-            {
-              key: "created_at",
-              title: "Saved At",
-              render: (value) => (value ? new Date(value).toLocaleString() : "--"),
-            },
-            {
-              key: "value",
-              title: "Threshold (°C)",
-              render: (value) =>
-                typeof value === "number" ? `${Number(value).toFixed(2)}` : "--",
-            },
-            {
-              key: "note",
-              title: "Note",
-              render: (value) => value || "-",
-            },
-          ]}
-          data={history}
-          keyExtractor={(item) => item.id}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Threshold History</Text>
+            {loading && <ActivityIndicator />}
+          </View>
+          <DataTable
+            columns={[
+              {
+                key: "created_at",
+                title: "Saved At",
+                render: (value) => (value ? new Date(value).toLocaleString() : "--"),
+              },
+              {
+                key: "value",
+                title: "Threshold (°C)",
+                render: (value) =>
+                  typeof value === "number" ? `${Number(value).toFixed(2)}` : "--",
+              },
+              {
+                key: "note",
+                title: "Note",
+                render: (value) => value || "-",
+              },
+            ]}
+            data={history}
+            keyExtractor={(item) => item.id}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -152,10 +208,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   title: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 12,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  logoutText: {
+    color: '#ef4444',
+    fontWeight: '500',
   },
   label: {
     marginTop: 16,

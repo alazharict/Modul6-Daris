@@ -23,11 +23,23 @@ export function MonitoringScreen() {
   const fetchReadings = useCallback(async () => {
     setLoading(true);
     setApiError(null);
-    try {
-      const data = await Api.getSensorReadings();
+        try {
+     const data = await Api.getSensorReadings();
       setReadings(data ?? []);
     } catch (err) {
-      setApiError(err.message);
+      if (err.message.includes('Authentication failed')) {
+    Alert.alert('Session Expired', 'Please login again', [
+      { 
+        text: 'OK', 
+        onPress: () => navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
+    ]);
+  } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
