@@ -53,5 +53,27 @@ export const UsersModel = {
 
     if (error) throw error;
     return true;
+  },
+
+  async updateProfile(id, profileData) {
+    const { name } = profileData;
+    
+    const updatePayload = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (name !== undefined) {
+      updatePayload.name = name;
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update(updatePayload)
+      .eq("id", id)
+      .select("id, email, name, created_at")
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 };

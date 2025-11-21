@@ -111,11 +111,26 @@ export const AuthController = {
   async updateProfile(req, res) {
     try {
       const { name } = req.body;
-      
-      // Update user logic would go here
-      // This is a placeholder for profile update functionality
-      
-      res.json({ message: "Profile updated successfully" });
+      const userId = req.user.id;
+
+      // Validation
+      if (name === undefined) {
+        return res.status(400).json({ error: "No profile data to update" });
+      }
+
+      if (typeof name === 'string' && name.trim() === '') {
+        return res.status(400).json({ error: "Name cannot be empty" });
+      }
+
+      // Update user profile
+      const updatedUser = await UsersModel.updateProfile(userId, { 
+        name: name?.trim() || name
+      });
+
+      res.json({
+        message: "Profile updated successfully",
+        user: updatedUser
+      });
     } catch (error) {
       console.error("Update profile error:", error);
       res.status(500).json({ error: "Internal server error" });
