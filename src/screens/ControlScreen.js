@@ -12,10 +12,13 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+// --- IMPORT PENTING ---
 import { Api } from "../services/api";
 import { DataTable } from "../components/DataTable";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { logout } from "../utils/storage";
+import { emitAuthChange } from "../utils/authEvents"; // Pastikan path ini sesuai lokasi file event Anda
 
 const ControlScreen = () => {
   const navigation = useNavigation();
@@ -33,10 +36,11 @@ const ControlScreen = () => {
       const data = await Api.getThresholds();
       setHistory(data ?? []);
     } catch (err) {
-      if (err.message.includes('Authentication failed')) {
+      // Jika error autentikasi, paksa logout
+      if (err.message && err.message.includes("Authentication failed")) {
         handleAuthError();
       } else {
-        setError(err.message);
+        setError(err.message || "Failed to load history");
       }
     } finally {
       setLoading(false);
@@ -44,18 +48,19 @@ const ControlScreen = () => {
   }, []);
 
   const handleAuthError = () => {
-    Alert.alert('Session Expired', 'Please login again', [
-      { 
-        text: 'OK', 
+    Alert.alert("Session Expired", "Please login again", [
+      {
+        text: "OK",
         onPress: async () => {
           try {
             await logout();
-            // App listens to auth changes and will show the Login screen
+            // Sinyal logout otomatis jika sesi habis
+            emitAuthChange(false);
           } catch (err) {
-            console.error('Error during session expiry logout:', err);
+            console.error("Error during session expiry logout:", err);
           }
-        }
-      }
+        },
+      },
     ]);
   };
 
@@ -81,36 +86,36 @@ const ControlScreen = () => {
       setNote("");
       await fetchHistory();
     } catch (err) {
-      if (err.message.includes('Authentication failed')) {
+      if (err.message && err.message.includes("Authentication failed")) {
         handleAuthError();
       } else {
-        setError(err.message);
+        setError(err.message || "Failed to save");
       }
     } finally {
       setSubmitting(false);
     }
   }, [thresholdValue, note, fetchHistory]);
 
+  // --- LOGIKA TOMBOL LOGOUT ---
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await logout();
-              // App listens to auth changes and will show the Login screen
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // 1. Hapus data user dari HP
+            await logout();
+
+            // 2. Kirim sinyal ke App.js agar tampilan berubah ke Login
+            emitAuthChange(false);
+          } catch (error) {
+            console.error("Logout error:", error);
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   return (
@@ -123,11 +128,14 @@ const ControlScreen = () => {
           <View style={styles.card}>
             <View style={styles.headerRow}>
               <Text style={styles.title}>Configure Threshold</Text>
-              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.logoutButton}
+              >
                 <Text style={styles.logoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
-            
+
             {latestThreshold !== null && (
               <Text style={styles.metaText}>
                 Current threshold: {Number(latestThreshold).toFixed(2)}°C
@@ -157,7 +165,11 @@ const ControlScreen = () => {
               onPress={handleSubmit}
               disabled={submitting}
             >
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Threshold</Text>}
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Save Threshold</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -170,13 +182,16 @@ const ControlScreen = () => {
               {
                 key: "created_at",
                 title: "Saved At",
-                render: (value) => (value ? new Date(value).toLocaleString() : "--"),
+                render: (value) =>
+                  value ? new Date(value).toLocaleString() : "--",
               },
               {
                 key: "value",
                 title: "Threshold (°C)",
                 render: (value) =>
-                  typeof value === "number" ? `${Number(value).toFixed(2)}` : "--",
+                  typeof value === "number"
+                    ? `${Number(value).toFixed(2)}`
+                    : "--",
               },
               {
                 key: "note",
@@ -191,13 +206,10 @@ const ControlScreen = () => {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#f8f9fb",
-  },
+  container: { padding: 16, backgroundColor: "#f8f9fb" },
   card: {
     backgroundColor: "#fff",
     padding: 20,
@@ -210,27 +222,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  logoutButton: {
-    padding: 8,
-  },
-  logoutText: {
-    color: '#ef4444',
-    fontWeight: '500',
-  },
-  label: {
-    marginTop: 16,
-    fontWeight: "600",
-    color: "#444",
-  },
+  title: { fontSize: 18, fontWeight: "600" },
+  logoutButton: { padding: 8 },
+  logoutText: { color: "#ef4444", fontWeight: "500" },
+  label: { marginTop: 16, fontWeight: "600", color: "#444" },
   input: {
     borderWidth: 1,
     borderColor: "#d0d0d0",
@@ -240,10 +240,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#fff",
   },
-  noteInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
+  noteInput: { minHeight: 80, textAlignVertical: "top" },
   button: {
     marginTop: 20,
     backgroundColor: "#2563eb",
@@ -251,31 +248,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  metaText: {
-    color: "#666",
-  },
-  errorText: {
-    marginTop: 12,
-    color: "#c82333",
-  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  metaText: { color: "#666" },
+  errorText: { marginTop: 12, color: "#c82333" },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 12,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "600" },
 });
 
 export default ControlScreen;

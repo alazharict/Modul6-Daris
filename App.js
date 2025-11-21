@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { enableScreens } from "react-native-screens";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+
+// Import Screens
 import MonitoringScreen from "./src/screens/MonitoringScreen.js";
 import ControlScreen from "./src/screens/ControlScreen.js";
 import DifferenceScreen from "./src/screens/DifferenceScreen.js";
@@ -12,9 +14,14 @@ import LoginScreen from "./src/screens/LoginScreen.js";
 import SignUpScreen from "./src/screens/SignUpScreen.js";
 import ProfileScreen from "./src/screens/ProfileScreen.js";
 import SplashScreen from "./src/screens/SplashScreen.js";
+
+// Import Services & Utils
 import { assertConfig } from "./src/services/config.js";
 import { isAuthenticated } from "./src/utils/storage.js";
 import { SwipeTabNavigator } from "./src/components/SwipeTabNavigator.js";
+
+// --- 1. TAMBAHKAN IMPORT INI ---
+import { subscribeAuth } from "./src/utils/authEvents"; 
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -25,10 +32,8 @@ function MainTabs() {
   const navigation = useNavigation();
   const currentTabName = useRef("Monitoring");
   const tabNames = ["Monitoring", "Difference", "Control", "Profile"];
+  
   const handleSwipe = (direction) => {
-    // const state = navigation.getState();
-    // if (!state || !state.routes) return;
-    
     const currentIdx = tabNames.indexOf(currentTabName.current);
     let nextIdx = currentIdx;
     
@@ -42,7 +47,6 @@ function MainTabs() {
       const nextTab = tabNames[nextIdx];
       console.log("[App] Swiping from", currentTabName.current, "to", nextTab);
       
-      // Stack Navigator akan meneruskan ini ke Tab Navigator di dalamnya.
       navigation.navigate('MainTabs', { screen: nextTab });
       currentTabName.current = nextTab;
     }
@@ -51,7 +55,7 @@ function MainTabs() {
   return (
     <SwipeTabNavigator onSwipe={handleSwipe}>
       <Tab.Navigator
-      screenListeners={({ route }) => ({
+        screenListeners={({ route }) => ({
           state: (e) => {
             const index = e.data.state.index;
             const routeName = e.data.state.routeNames[index];
@@ -93,6 +97,19 @@ export default function App() {
   useEffect(() => {
     checkAuthStatus();
     assertConfig();
+
+    // --- 2. TAMBAHKAN LISTENER DISINI ---
+    // Ini akan mendengarkan sinyal dari LoginScreen (true) atau ControlScreen (false)
+    const unsubscribe = subscribeAuth((status) => {
+      setIsLoggedIn(status);
+    });
+
+    // Bersihkan listener saat aplikasi ditutup/unmount
+    return () => {
+      unsubscribe();
+    };
+    // -------------------------------------
+
   }, []);
 
   const checkAuthStatus = async () => {

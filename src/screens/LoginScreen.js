@@ -14,9 +14,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+// --- IMPORT PENTING ---
 import { storeData } from '../utils/storage';
-import { emitAuthChange } from '../utils/authEvents';
 import { Api } from '../services/api';
+import { emitAuthChange } from '../utils/authEvents'; // Import event auth
+
 const LoginScreen = () => {
   const navigation = useNavigation();
 
@@ -25,16 +28,19 @@ const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Navigasi simpel ke Sign Up
   const handleSignUp = () => {
     navigation.navigate('SignUp');
   };
 
   const handleSubmit = async () => {
+    // Validasi input kosong
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
+    // Validasi format email sederhana
     if (!email.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
@@ -43,18 +49,16 @@ const LoginScreen = () => {
     setLoading(true);
 
     try {
+      // 1. Panggil API Login
       const data = await Api.login({ email, password });
 
-      // Store token and user data
+      // 2. Simpan token dan data user
       await storeData('token', data.token);
       await storeData('user', JSON.stringify(data.user));
 
-      // Emit auth change so app root navigator switches to MainTabs
-      try {
-        emitAuthChange(true);
-      } catch (err) {
-        console.error('Error emitting auth change:', err);
-      }
+      // 3. KIRIM SINYAL LOGIN SUKSES
+      // Ini akan mentrigger App.js untuk menampilkan MainTabs (Monitoring)
+      emitAuthChange(true);
 
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
