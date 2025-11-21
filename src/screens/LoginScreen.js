@@ -60,6 +60,8 @@ const LoginScreen = () => {
       // Ini akan mentrigger App.js untuk menampilkan MainTabs (Monitoring)
       emitAuthChange(true);
 
+      navigation.navigate('MainTabs');
+
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Something went wrong');
     } finally {

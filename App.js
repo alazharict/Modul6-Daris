@@ -1,5 +1,9 @@
 ﻿import React, { useRef, useState, useEffect } from "react";
-import { NavigationContainer, DefaultTheme, useNavigation } from "@react-navigation/native";
+import {
+  NavigationContainer,
+  DefaultTheme,
+  useNavigation,
+} from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -15,39 +19,41 @@ import SignUpScreen from "./src/screens/SignUpScreen.js";
 import ProfileScreen from "./src/screens/ProfileScreen.js";
 import SplashScreen from "./src/screens/SplashScreen.js";
 
-// Import Services & Utils
 import { assertConfig } from "./src/services/config.js";
 import { isAuthenticated } from "./src/utils/storage.js";
 import { SwipeTabNavigator } from "./src/components/SwipeTabNavigator.js";
-
-// --- 1. TAMBAHKAN IMPORT INI ---
-import { subscribeAuth } from "./src/utils/authEvents"; 
+import { subscribeAuth, emitAuthChange } from "./src/utils/authEvents";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 enableScreens(true);
 
-function MainTabs() {
+function MainTabs({ isLoggedIn }) {
   const navigation = useNavigation();
   const currentTabName = useRef("Monitoring");
-  const tabNames = ["Monitoring", "Difference", "Control", "Profile"];
-  
+
+  // 1. Tentukan Tab apa saja yang tersedia
+  const availableTabs = isLoggedIn
+    ? ["Monitoring", "Difference", "Control", "Profile"]
+    : ["Monitoring"];
+
   const handleSwipe = (direction) => {
-    const currentIdx = tabNames.indexOf(currentTabName.current);
+    if (availableTabs.length <= 1) return;
+
+    const currentIdx = availableTabs.indexOf(currentTabName.current);
     let nextIdx = currentIdx;
-    
+
     if (direction === "right") {
       nextIdx = currentIdx - 1;
     } else {
       nextIdx = currentIdx + 1;
     }
-   
-    if (nextIdx >= 0 && nextIdx < tabNames.length) {
-      const nextTab = tabNames[nextIdx];
-      console.log("[App] Swiping from", currentTabName.current, "to", nextTab);
-      
-      navigation.navigate('MainTabs', { screen: nextTab });
+
+    if (nextIdx >= 0 && nextIdx < availableTabs.length) {
+      const nextTab = availableTabs[nextIdx];
+      console.log("[App] Swiping to", nextTab);
+      navigation.navigate("MainTabs", { screen: nextTab });
       currentTabName.current = nextTab;
     }
   };
@@ -55,6 +61,8 @@ function MainTabs() {
   return (
     <SwipeTabNavigator onSwipe={handleSwipe}>
       <Tab.Navigator
+        key={isLoggedIn ? "logged-in" : "logged-out"}
+        initialRouteName="Monitoring"
         screenListeners={({ route }) => ({
           state: (e) => {
             const index = e.data.state.index;
@@ -81,10 +89,19 @@ function MainTabs() {
           },
         })}
       >
-        <Tab.Screen name="Monitoring" component={MonitoringScreen} />
-        <Tab.Screen name="Difference" component={DifferenceScreen} />
-        <Tab.Screen name="Control" component={ControlScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
+        <Tab.Screen
+          name="Monitoring"
+          component={MonitoringScreen}
+          initialParams={{ isGuest: !isLoggedIn }}
+        />
+
+        {isLoggedIn && (
+          <>
+            <Tab.Screen name="Difference" component={DifferenceScreen} />
+            <Tab.Screen name="Control" component={ControlScreen} />
+            <Tab.Screen name="Profile" component={ProfileScreen} />
+          </>
+        )}
       </Tab.Navigator>
     </SwipeTabNavigator>
   );
@@ -93,45 +110,47 @@ function MainTabs() {
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigationRef = useRef();
 
   useEffect(() => {
     checkAuthStatus();
     assertConfig();
 
-    // --- 2. TAMBAHKAN LISTENER DISINI ---
-    // Ini akan mendengarkan sinyal dari LoginScreen (true) atau ControlScreen (false)
     const unsubscribe = subscribeAuth((status) => {
+      console.log("Auth event received:", status);
       setIsLoggedIn(status);
+
+      // --- PERBAIKAN PENTING: RESET NAVIGATION SAAT LOGOUT ---
+      if (!status && navigationRef.current) {
+        console.log("Logout detected, resetting to guest mode...");
+        
+        // Reset navigation ke MainTabs (guest mode)
+        navigationRef.current.reset({
+          index: 0,
+          routes: [{ name: "MainTabs" }],
+        });
+      }
     });
 
-    // Bersihkan listener saat aplikasi ditutup/unmount
-    return () => {
-      unsubscribe();
-    };
-    // -------------------------------------
-
+    return () => unsubscribe();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
       const authenticated = await isAuthenticated();
+      console.log("checkAuthStatus result:", authenticated);
       setIsLoggedIn(authenticated);
     } catch (error) {
-      console.error("Error checking auth status:", error);
+      console.log("checkAuthStatus error:", error);
       setIsLoggedIn(false);
     } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 2000);
+      setTimeout(() => setIsLoading(false), 1000);
     }
   };
 
   const theme = {
     ...DefaultTheme,
-    colors: {
-      ...DefaultTheme.colors,
-      background: "#f8f9fb",
-    },
+    colors: { ...DefaultTheme.colors, background: "#f8f9fb" },
   };
 
   if (isLoading) {
@@ -140,11 +159,18 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={theme}>
+      <NavigationContainer 
+        theme={theme}
+        ref={navigationRef} // Tambahkan ref untuk akses navigation
+      >
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {isLoggedIn ? (
-            <Stack.Screen name="MainTabs" component={MainTabs} />
-          ) : (
+          {/* MainTabs SELALU ada di stack */}
+          <Stack.Screen name="MainTabs">
+            {(props) => <MainTabs {...props} isLoggedIn={isLoggedIn} />}
+          </Stack.Screen>
+
+          {/* Login & SignUp hanya tersedia saat belum login */}
+          {!isLoggedIn && (
             <>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="SignUp" component={SignUpScreen} />

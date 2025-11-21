@@ -18,7 +18,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Api } from "../services/api";
 import { DataTable } from "../components/DataTable";
 import { logout } from "../utils/storage";
-import { emitAuthChange } from "../utils/authEvents"; // Pastikan path ini sesuai lokasi file event Anda
+
+import { emitAuthChange } from "../utils/authEvents";
+
 
 const ControlScreen = () => {
   const navigation = useNavigation();
@@ -108,8 +110,10 @@ const ControlScreen = () => {
             // 1. Hapus data user dari HP
             await logout();
 
+            
             // 2. Kirim sinyal ke App.js agar tampilan berubah ke Login
-            emitAuthChange(false);
+           emitAuthChange(false);
+            
           } catch (error) {
             console.error("Logout error:", error);
           }
