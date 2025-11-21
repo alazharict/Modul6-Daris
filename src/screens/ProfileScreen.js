@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Api } from '../services/api';
 import { getUser, logout, storeData } from '../utils/storage';
 import { EditProfileModal } from './EditProfileModal';
-import { SwipeIndicator } from "../components/SwipeIndicator";
+
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -144,7 +144,7 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-        <SwipeIndicator />
+        
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

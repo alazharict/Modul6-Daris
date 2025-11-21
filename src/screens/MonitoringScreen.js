@@ -16,9 +16,9 @@ import { Api } from "../services/api.js";
 import { DataTable } from "../components/DataTable.js";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { logout } from "../utils/storage";
-import { SwipeIndicator } from "../components/SwipeIndicator";
 
-export function MonitoringScreen() {
+
+const  MonitoringScreen = () => {
   const { temperature, timestamp, connectionState, error: mqttError } = useMqttSensor();
   const [allReadings, setAllReadings] = useState([]); // Semua data
   const [currentReadings, setCurrentReadings] = useState([]); // Data yang ditampilkan di halaman saat ini
@@ -147,7 +147,7 @@ export function MonitoringScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-      <SwipeIndicator />
+      
       <ScrollView
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -485,3 +485,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+
+export default MonitoringScreen;

@@ -17,7 +17,7 @@ import { DataTable } from "../components/DataTable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { logout } from "../utils/storage";
 
-export function ControlScreen() {
+const ControlScreen = () => {
   const navigation = useNavigation();
   const [thresholdValue, setThresholdValue] = useState(30);
   const [note, setNote] = useState("");
@@ -277,3 +277,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+export default ControlScreen;

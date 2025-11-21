@@ -13,9 +13,9 @@ import { useMqttSensor } from "../hooks/useMqttSensor.js";
 import { Api } from "../services/api.js";
 import { DataTable } from "../components/DataTable.js";
 import { logout } from "../utils/storage";
-import { SwipeIndicator } from "../components/SwipeIndicator";
 
-export function DifferenceScreen() {
+
+const DifferenceScreen = () => {
   const {
     temperature,
     timestamp,
@@ -106,7 +106,7 @@ export function DifferenceScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-      <SwipeIndicator />
+      
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
@@ -248,3 +248,5 @@ const styles = StyleSheet.create({
     color: "#c82333",
   },
 });
+
+export default DifferenceScreen;
